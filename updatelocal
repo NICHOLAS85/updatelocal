@@ -1,24 +1,10 @@
 #!/bin/bash
 
 trap 'echo "Cleaning up..."; UL_cleanup; return 0' SIGINT
-cores=$(nproc)
-#support for disabling auto-ls when terminal is not dolphin, already disabled otherwise
-[ -n "$isdolphin" ] && { $isdolphin || zplugin unload -q desyncr/auto-ls; }
-cache=$UPDATELOCAL_GITDIR
-
-if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="set"; fi
-if [[ $1 = "-p" || $1 = "--pwd" || $2 = "-p" || $2 = "--pwd" || $1 = "-r" || $1 = "--repull" ]]; then
-  unset popit
-  UPDATELOCAL_GITDIR=$PWD
-fi
-
-cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory?" && return 1; }
-ls
-echo ""
 
 UL_loadautols(){
   zplugin ice load'[[ $isdolphin ]]' lucid
-  zplugin load desyncr/auto-ls
+  zplugin light desyncr/auto-ls
 }
 
 UL_cleanup(){
@@ -99,6 +85,21 @@ UL_recentcommits(){
 UL_connected(){
   ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) &> /dev/null && return 0 || { echo "You're not connected to the internet"; return 1; }
 }
+
+cores=$(nproc)
+#support for disabling auto-ls when terminal is not dolphin, already disabled otherwise
+[ -n "$isdolphin" ] && { $isdolphin || zplugin unload -q desyncr/auto-ls; }
+cache=$UPDATELOCAL_GITDIR
+
+if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="set"; fi
+if [[ $1 = "-p" || $1 = "--pwd" || $2 = "-p" || $2 = "--pwd" || $1 = "-r" || $1 = "--repull" ]]; then
+  unset popit
+  UPDATELOCAL_GITDIR=$PWD
+fi
+
+cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory?" && return 1; }
+ls
+echo ""
 
 case $1 in
   --changes )
