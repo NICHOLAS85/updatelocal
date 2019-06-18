@@ -4,13 +4,34 @@ trap 'echo "Cleaning up..."; UL_cleanup; return 0' SIGINT
 
 UL_loadautols(){
   zplugin ice load'[[ $isdolphin ]]' lucid
-  zplugin light desyncr/auto-ls
+  zplugin load desyncr/auto-ls
 }
 
 UL_cleanup(){
-  zplugin status desyncr/auto-ls &>/dev/null && { UL_loadautols; if [[ -n $popit ]]; then cd - 2> /dev/null; fi; }
+  if zplugin status desyncr/auto-ls &>/dev/null && ! $isdolphin; then
+    UL_loadautols
+  fi
+  if [[ -z $popit ]]; then cd - 2> /dev/null; fi
+  UPDATELOCAL_GITDIR=$cache
+
   unfunction UL_loadautols UL_changelogs UL_checkupdates UL_fetchupdates UL_recentcommits UL_connected
   unset cores cache hidden popit UPSTREAM REMOTE
+  trap - SIGINT
+}
+
+UL_usage(){
+    cat <<- EOF
+Usage: updatelocal [args]
+
+Without arguments updatelocal will fetch all the directories located in \$UPDATELOCAL_GITDIR and highlight the repos with pending updates
+Args:
+    -r | --repull   Completely reset current git directory and pull latest changes from remote repo
+    -p | --pwd      Set \$UPDATELOCAL_GITDIR to the current directory temporarily
+    -c | --changes  Show a log of all repos with changes which have not been pulled yet
+
+    -h | --help     Show this extremely helpful text
+EOF
+  UL_cleanup
 }
 
 UL_fetchupdates(){
@@ -78,7 +99,7 @@ UL_recentcommits(){
     # and also only first 10 words (the (w)-flag enables word-indexing)
     lines=( "${lines[@]/(#b)[[:blank:]]#\|\|(*)(#e)/| ${${match[1]//$nl/ }[(w)1,(w)10]}}" )
   fi
-  git pull -j $cores
+  git pull -q -j $cores
   builtin print -rl -- "${lines[@]}" | command less -FRXi
 }
 
@@ -86,23 +107,29 @@ UL_connected(){
   ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) &> /dev/null && return 0 || { echo "You're not connected to the internet"; return 1; }
 }
 
-cores=$(nproc)
 #support for disabling auto-ls when terminal is not dolphin, already disabled otherwise
 [ -n "$isdolphin" ] && { $isdolphin || zplugin unload -q desyncr/auto-ls; }
-cache=$UPDATELOCAL_GITDIR
 
+cache=$UPDATELOCAL_GITDIR
 if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="set"; fi
 if [[ $1 = "-p" || $1 = "--pwd" || $2 = "-p" || $2 = "--pwd" || $1 = "-r" || $1 = "--repull" ]]; then
   unset popit
   UPDATELOCAL_GITDIR=$PWD
 fi
 
+if [[ $1 = "-h" || $1 = "--help" ]]; then
+  UL_usage
+  return
+fi
+
+cores=$(nproc)
+
 cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory?" && return 1; }
 ls
 echo ""
 
 case $1 in
-  --changes )
+  --changes | -c )
     hidden=true
     { for d in ./*/ ; do (builtin cd "$d" && UL_checkupdates); done
     echo ""
@@ -112,7 +139,7 @@ case $1 in
     shift 1
     UPSTREAM=${1:-'@{u}'}
     REMOTE=$(git rev-parse "$UPSTREAM" 2>/dev/null)
-    if [[ -z $REMOTE ]]; then echo "Commit checked out, pull manually"; UL_loadautols; return; fi
+    if [[ -z $REMOTE ]]; then echo "Commit checked out, pull manually"; UL_cleanup; fi
 
     echo "Assuming --pwd"
     echo "Are you sure you want to repull $PWD? [y/n]"
@@ -133,7 +160,6 @@ case $1 in
     ;;
 esac
 
-UPDATELOCAL_GITDIR=$cache
-if [[ -n $popit ]]; then cd - 2> /dev/null; fi
 
+if [[ -n $popit ]]; then cd - 2> /dev/null; fi
 UL_cleanup
