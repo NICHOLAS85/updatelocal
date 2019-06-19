@@ -14,7 +14,7 @@ UL_cleanup(){
   if [[ -z $popit ]]; then cd - 2> /dev/null; fi
   UPDATELOCAL_GITDIR=$cache
 
-  unfunction UL_loadautols UL_changelogs UL_checkupdates UL_fetchupdates UL_recentcommits UL_connected
+  unset -f UL_loadautols UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_changelogs UL_recentcommits UL_connected
   unset cores cache hidden popit UPSTREAM REMOTE
   trap - SIGINT
 }
