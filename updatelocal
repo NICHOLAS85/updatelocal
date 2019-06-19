@@ -2,20 +2,15 @@
 
 trap 'echo "Cleaning up..."; UL_cleanup; return 0' SIGINT
 
-UL_loadautols(){
-  zplugin ice load'[[ $isdolphin ]]' lucid
-  zplugin load desyncr/auto-ls
-}
-
 UL_cleanup(){
-  if zplugin status desyncr/auto-ls &>/dev/null && ! $isdolphin; then
-    UL_loadautols
+  if zplugin status desyncr/auto-ls &>/dev/null && ! $isdolphin && [[ -n $unloaded ]]; then
+    zplugin load desyncr/auto-ls
   fi
   if [[ -z $popit ]]; then cd - 2> /dev/null; fi
   UPDATELOCAL_GITDIR=$cache
 
-  unset -f UL_loadautols UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_changelogs UL_recentcommits UL_connected
-  unset cores cache hidden popit UPSTREAM REMOTE
+  unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
+  unset cores cache hidden popit REMOTE unloaded
   trap - SIGINT
 }
 
@@ -43,11 +38,10 @@ UL_fetchupdates(){
 
 UL_checkupdates(){
   if [ -d .git ]; then
-    local UPSTREAM LOCAL REMOTE BASE gitname
-    UPSTREAM=${1:-'@{u}'}
+    local LOCAL REMOTE BASE gitname
     LOCAL=$(git rev-parse @)
-    REMOTE=$(git rev-parse "$UPSTREAM" 2>/dev/null)
-    BASE=$(git merge-base @ "$UPSTREAM" 2>/dev/null)
+    REMOTE=$(git rev-parse "@{u}" 2>/dev/null)
+    BASE=$(git merge-base @ "@{u}" 2>/dev/null)
     gitname=$(basename $PWD)
 
     if [ -z $BASE ] || [ -z $REMOTE ]; then
@@ -64,18 +58,30 @@ UL_checkupdates(){
   fi
 }
 
+UL_git_current_branch () {
+        local ref
+        ref=$(command git symbolic-ref --quiet HEAD 2> /dev/null)
+        local ret=$?
+        if [[ $ret != 0 ]]
+        then
+                [[ $ret == 128 ]] && return
+                ref=$(command git rev-parse --short HEAD 2> /dev/null)  || return
+        fi
+        echo ${ref#refs/heads/}
+}
+
 UL_changelogs(){
   if [ -d .git ]; then
     local currentbranch tracked_remote changes
-    currentbranch=$(git_current_branch)
+    currentbranch=$(UL_git_current_branch)
     tracked_remote=$(git config "branch.$currentbranch.remote")
-    if [ -z "$currentbranch" ] || [ -z "$(UPSTREAM=${1:-'@{u}'}; git rev-parse "$UPSTREAM" 2>/dev/null)" ] ; then return; fi
+    if [ -z "$currentbranch" ] || [ -z "$(git rev-parse "@{u}" 2>/dev/null)" ] ; then return; fi
     changes=$(git log "$currentbranch".."$tracked_remote"/"$currentbranch")
 
-    if [ $changes ]; then echo "BEGIN===================================================="
+    if [ $changes ]; then echo "BEGIN====================================================\\"
     echo "$PWD"; fi
     git log --color=always --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --stat "$currentbranch".."$tracked_remote"/"$currentbranch"
-    if [ $changes ]; then echo "$PWD"; echo "======================================================END"
+    if [ $changes ]; then echo "$PWD"; echo "======================================================END/"
     echo ""; fi
   fi
 }
@@ -108,7 +114,7 @@ UL_connected(){
 }
 
 #support for disabling auto-ls when terminal is not dolphin, already disabled otherwise
-[ -n "$isdolphin" ] && { $isdolphin || zplugin unload -q desyncr/auto-ls; }
+[[ -n "$isdolphin" ]] && { $isdolphin || { zplugin unload -q desyncr/auto-ls &>/dev/null && unloaded=true; } }
 
 cache=$UPDATELOCAL_GITDIR
 if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="set"; fi
@@ -124,7 +130,7 @@ fi
 
 cores=$(nproc)
 
-cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory?" && return 1; }
+[[ -n $UPDATELOCAL_GITDIR ]] && cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory? Make sure to set \$UPDATELOCAL_GITDIR" && { UL_cleanup; return 1; } }
 ls
 echo ""
 
@@ -136,10 +142,8 @@ case $1 in
     for d in ./*/ ; do (builtin cd "$d" && UL_changelogs); done } | less -R
     ;;
   --repull | -r )
-    shift 1
-    UPSTREAM=${1:-'@{u}'}
-    REMOTE=$(git rev-parse "$UPSTREAM" 2>/dev/null)
-    if [[ -z $REMOTE ]]; then echo "Commit checked out, pull manually"; UL_cleanup; fi
+    REMOTE=$(git rev-parse "@{u}" 2>/dev/null)
+    if [[ -z $REMOTE ]]; then echo "Commit checked out, pull manually"; UL_cleanup; return 1; fi
 
     echo "Assuming --pwd"
     echo "Are you sure you want to repull $PWD? [y/n]"
