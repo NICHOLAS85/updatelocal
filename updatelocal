@@ -6,7 +6,7 @@ UL_cleanup(){
   if zplugin status desyncr/auto-ls &>/dev/null && ! $isdolphin && [[ -n $unloaded ]]; then
     zplugin load desyncr/auto-ls
   fi
-  if [[ -z $popit ]]; then cd - 2> /dev/null; fi
+  if [[ -n $popit ]]; then cd - 2> /dev/null; fi
   UPDATELOCAL_GITDIR=$cache
 
   unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
@@ -115,10 +115,10 @@ UL_connected(){
 
 #support for disabling auto-ls when terminal is not dolphin, already disabled otherwise
 [[ -n "$isdolphin" ]] && { $isdolphin || { zplugin unload -q desyncr/auto-ls &>/dev/null && unloaded=true; } }
-
+UPDATELOCAL_GITDIR=$(realpath $UPDATELOCAL_GITDIR)
 cache=$UPDATELOCAL_GITDIR
 if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="set"; fi
-if [[ $1 = "-p" || $1 = "--pwd" || $2 = "-p" || $2 = "--pwd" || $1 = "-r" || $1 = "--repull" ]]; then
+if [[ $1 = "-p" || $1 = "--pwd" || $2 = "-p" || $2 = "--pwd" ]]; then
   unset popit
   UPDATELOCAL_GITDIR=$PWD
 fi
@@ -130,7 +130,7 @@ fi
 
 cores=$(nproc)
 
-[[ -n $UPDATELOCAL_GITDIR ]] && cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory? Make sure to set \$UPDATELOCAL_GITDIR" && { UL_cleanup; return 1; } }
+[[ -n $UPDATELOCAL_GITDIR && $1 != "-r" && $1 != "--repull" ]] && { cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory? Make sure to set \$UPDATELOCAL_GITDIR" && { UL_cleanup; return 1; } } }
 ls
 echo ""
 
@@ -142,10 +142,11 @@ case $1 in
     for d in ./*/ ; do (builtin cd "$d" && UL_changelogs); done } | less -R
     ;;
   --repull | -r )
+    [[ $UPDATELOCAL_GITDIR/$2 != $UPDATELOCAL_GITDIR/ ]] && cd $UPDATELOCAL_GITDIR/$2 && popit="set" || { echo "Assuming --pwd"; unset popit }
+    
     REMOTE=$(git rev-parse "@{u}" 2>/dev/null)
     if [[ -z $REMOTE ]]; then echo "Commit checked out, pull manually"; UL_cleanup; return 1; fi
 
-    echo "Assuming --pwd"
     echo "Are you sure you want to repull $PWD? [y/n]"
     read key
     if [ "$key" = "y" ] && UL_connected; then
@@ -165,5 +166,4 @@ case $1 in
 esac
 
 
-if [[ -n $popit ]]; then cd - 2> /dev/null; fi
 UL_cleanup

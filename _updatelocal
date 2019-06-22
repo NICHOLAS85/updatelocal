@@ -1,0 +1,36 @@
+#compdef updatelocal
+
+local context state state_descr line ret=1
+typeset -A opt_args
+
+typeset -a commands
+commands=(
+    -r:'completely reset current git directory and pull latest changes from remote repo'
+    -p:'set $UPDATELOCAL_GITDIR to the current directory temporarily'
+    -c:'show a log of all repos with changes which have not been pulled yet'
+    -h:'show this extremely helpful text'
+)
+_arguments -C \
+    '1: :->command'\
+    '*: :->argument' && ret=0
+
+case $state in
+    command)
+        _describe -t commands "Zplugin command" commands && ret=0
+        ;;
+    argument)
+        case $words[2] in
+            -r)
+                typeset -a plugins
+                plugins=( "$UPDATELOCAL_GITDIR/"/*(N:t) )
+
+                _wanted plugins expl "Plugins" \
+                    compadd "$@" -a - plugins && ret=0
+                ;;
+            *)
+                ret=1
+                ;;
+        esac
+esac
+
+return "$ret"
