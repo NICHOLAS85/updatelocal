@@ -1,12 +1,10 @@
-#!/bin/bash
-
 trap 'echo "Cleaning up..."; UL_cleanup; return 0' SIGINT
 
 UL_cleanup(){
+  if [[ -n $popit ]]; then cd - 2> /dev/null; fi
   if zplugin status desyncr/auto-ls &>/dev/null && ! $isdolphin && [[ -n $unloaded ]]; then
     zplugin load desyncr/auto-ls
   fi
-  if [[ -n $popit ]]; then cd - 2> /dev/null; fi
   UPDATELOCAL_GITDIR=$cache
 
   unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
