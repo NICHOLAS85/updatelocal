@@ -20,11 +20,11 @@ Usage: updatelocal [args]
 
 Without arguments updatelocal will fetch all the directories located in \$UPDATELOCAL_GITDIR and highlight the repos with pending updates
 Args:
-    -r | --repull   Completely reset current git directory and pull latest changes from remote repo
-    -p | --pwd      Set \$UPDATELOCAL_GITDIR to the current directory temporarily
-    -c | --changes  Show a log of all repos with changes which have not been pulled yet
+  -r | --repull [basename] Completely reset supplied git directory basename and pull latest changes from remote repo, resets current directory if basename not supplied
+  -p | --pwd               Set \$UPDATELOCAL_GITDIR to the current directory temporarily
+  -c | --changes           Show a log of all repos with changes which have not been pulled yet
 
-    -h | --help     Show this extremely helpful text
+  -h | --help              Show this extremely helpful text
 EOF
   UL_cleanup
 }
@@ -144,8 +144,8 @@ case $1 in
   --repull | -r )
     [[ $UPDATELOCAL_GITDIR/$2 != $UPDATELOCAL_GITDIR/ ]] && cd $UPDATELOCAL_GITDIR/$2 && popit="set" || { echo "Assuming --pwd"; unset popit }
     
-    REMOTE=$(git rev-parse "@{u}" 2>/dev/null)
-    if [[ -z $REMOTE ]]; then echo "Commit checked out, pull manually"; UL_cleanup; return 1; fi
+    REMOTE=$(git rev-parse "@{u}")
+    if [[ -z $REMOTE ]]; then echo "Unable to repull"; UL_cleanup; return 1; fi
 
     echo "Are you sure you want to repull $PWD? [y/n]"
     read key
