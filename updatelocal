@@ -8,7 +8,7 @@ UL_cleanup(){
   UPDATELOCAL_GITDIR=$cache
 
   unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
-  unset cores cache hidden popit REMOTE unloaded
+  unset cores cache hidden popit REMOTE unloaded lines
   trap - SIGINT
 }
 
@@ -80,7 +80,7 @@ UL_changelogs(){
     echo "$PWD"; fi
     git log --color=always --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --stat "$currentbranch".."$tracked_remote"/"$currentbranch"
     if [ $changes ]; then echo "$PWD"; echo "======================================================END/"
-    echo ""; fi
+    echo; fi
   fi
 }
 
@@ -88,7 +88,6 @@ UL_changelogs(){
 UL_recentcommits(){
   setopt localoptions extendedglob nokshglob noksharrays noshwordsplit
   local nl=$'\n' escape=$'\x1b['
-  local -a lines
 
   lines=( ${(f)"$(command git log --color --date=short --pretty=format:'%Cgreen%cd %h %Creset%s %Cred%d%Creset || %b' ..FETCH_HEAD)"} )
   if (( ${#lines} > 0 )); then
@@ -103,7 +102,6 @@ UL_recentcommits(){
     # and also only first 10 words (the (w)-flag enables word-indexing)
     lines=( "${lines[@]/(#b)[[:blank:]]#\|\|(*)(#e)/| ${${match[1]//$nl/ }[(w)1,(w)10]}}" )
   fi
-  git pull -q -j $cores
   builtin print -rl -- "${lines[@]}" | command less -FRXi
 }
 
@@ -130,13 +128,13 @@ cores=$(nproc)
 
 [[ -n $UPDATELOCAL_GITDIR && $1 != "-r" && $1 != "--repull" ]] && { cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory? Make sure to set \$UPDATELOCAL_GITDIR" && { UL_cleanup; return 1; } } }
 ls
-echo ""
+echo
 
 case $1 in
   --changes | -c )
     hidden=true
     { for d in ./*/ ; do (builtin cd "$d" && UL_checkupdates); done
-    echo ""
+    echo
     for d in ./*/ ; do (builtin cd "$d" && UL_changelogs); done } | less -R
     ;;
   --repull | -r )
@@ -144,22 +142,24 @@ case $1 in
     
     REMOTE=$(git rev-parse "@{u}")
     if [[ -z $REMOTE ]]; then echo "Unable to repull"; UL_cleanup; return 1; fi
-
+    
+    UL_recentcommits
     echo "Are you sure you want to repull $PWD? [y/n]"
     read key
     if [ "$key" = "y" ] && UL_connected; then
       git reset --hard
       git clean -fdx
-      UL_recentcommits
-      echo ""
+      git pull -q -j $cores
+      builtin print -rl -- "${lines[@]}" | command less -FRXi
+      echo
     fi
     ;;
   * )
     echo "Fetching latest updates..."
     UL_connected && (for d in ./*/ ; do (builtin cd "$d" && UL_fetchupdates) & done | GREP_COLORS='ms=1;34' grep -E --color '.*From.*|$'; wait)
-    echo ""
+    echo
     for d in ./*/ ; do (builtin cd "$d" && UL_checkupdates); done
-    echo ""
+    echo
     ;;
 esac
 
