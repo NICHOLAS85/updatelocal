@@ -3,5 +3,5 @@
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 
 updatelocal() {
- source "${0:h}/updatelocal"
+ source "${0:a:h}"/updatelocal
 }
