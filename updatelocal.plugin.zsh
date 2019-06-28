@@ -2,6 +2,8 @@
 # Standardized $0 handling
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 
+path=("${0:h}/bin" "${path[@]}")
+
 updatelocal() {
- source "${0:a:h}"/updatelocal
+ source updatelocal
 }
