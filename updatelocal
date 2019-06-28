@@ -149,8 +149,7 @@ case $1 in
     if [ "$key" = "y" ] && UL_connected; then
       git reset --hard
       git clean -fdx
-      git pull -q -j $cores
-      builtin print -rl -- "${lines[@]}" | command less -FRXi
+      git pull -j $cores
       echo
     fi
     ;;
