@@ -2,6 +2,8 @@
 # Standardized $0 handling
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 
-fpath=("${0:h}/bin" "${fpath[@]}")
+path=("${0:h}/bin" "${path[@]}")
 
-autoload -Uz updatelocal
+updatelocal() {
+ source updatelocal
+}
