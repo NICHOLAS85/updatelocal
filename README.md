@@ -1,3 +1,3 @@
-zplugin ice wait'0' as'command' pick'updatelocal' atload'updatelocal() { source updatelocal }';
+zplugin ice wait'0';
 
 zplugin light NICHOLAS85/updatelocal;
