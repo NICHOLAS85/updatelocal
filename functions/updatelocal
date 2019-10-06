@@ -127,7 +127,7 @@ fi
 cores=$(nproc)
 
 [[ -n $UPDATELOCAL_GITDIR && $1 != "-r" && $1 != "--repull" ]] && { cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory? Make sure to set \$UPDATELOCAL_GITDIR" && { UL_cleanup; return 1; } } }
-ls
+ls --color=auto
 echo
 
 case $1 in
