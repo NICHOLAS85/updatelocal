@@ -37,7 +37,7 @@ UL_fetchupdates(){
 UL_checkupdates(){
   if [ -d .git ]; then
     local LOCAL REMOTE BASE gitname
-    LOCAL=$(git rev-parse @)
+    LOCAL=$(git rev-parse @ 2>/dev/null)
     REMOTE=$(git rev-parse "@{u}" 2>/dev/null)
     BASE=$(git merge-base @ "@{u}" 2>/dev/null)
     gitname=$(basename $PWD)
@@ -117,6 +117,7 @@ if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="set"; fi
 if [[ $1 = "-p" || $1 = "--pwd" || $2 = "-p" || $2 = "--pwd" ]]; then
   unset popit
   UPDATELOCAL_GITDIR=$PWD
+  shift
 fi
 
 if [[ $1 = "-h" || $1 = "--help" ]]; then

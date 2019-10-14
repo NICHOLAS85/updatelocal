@@ -5,8 +5,8 @@ typeset -A opt_args
 
 typeset -a commands
 commands=(
-    -r:'hard reset current git directory and pull latest changes from remote repo'
-    -p:'set $UPDATELOCAL_GITDIR to the current directory temporarily'
+    -r:'Completely reset supplied git directory basename and pull latest changes from remote repo, resets current directory if basename not supplied'
+    -p:'Set $UPDATELOCAL_GITDIR to the current directory temporarily and run'
     -c:'show a log of all repos with changes which have not been pulled yet'
     -h:'show this extremely helpful text'
 )
