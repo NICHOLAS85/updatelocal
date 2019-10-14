@@ -114,22 +114,30 @@ UL_connected(){
 UPDATELOCAL_GITDIR=$(realpath $UPDATELOCAL_GITDIR)
 cache=$UPDATELOCAL_GITDIR
 if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="set"; fi
-if [[ $1 = "-p" || $1 = "--pwd" || $2 = "-p" || $2 = "--pwd" ]]; then
+if [[ $1 = "-p" || $1 = "--pwd" ]]; then
   unset popit
   UPDATELOCAL_GITDIR=$PWD
   shift
 fi
 
-if [[ $1 = "-h" || $1 = "--help" ]]; then
-  UL_usage
-  return
-fi
-
 cores=$(nproc)
 
-[[ -n $UPDATELOCAL_GITDIR && $1 != "-r" && $1 != "--repull" ]] && { cd $UPDATELOCAL_GITDIR || { echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory? Make sure to set \$UPDATELOCAL_GITDIR" && { UL_cleanup; return 1; } } }
-ls --color=auto
-echo
+if [[ $1 != "-r" && $1 != "--repull" && $1 != "-h" && $1 != "--help" ]]; then
+    if [[ -z $UPDATELOCAL_GITDIR ]]; then
+        echo "\$UPDATELOCAl_GITDIR is unset, set this variable before running"
+        unset popit
+        UL_cleanup
+        return 1
+    elif cd $UPDATELOCAL_GITDIR; then
+        ls --color=auto
+        echo
+    else
+        echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory? Make sure to set \$UPDATELOCAL_GITDIR"
+        unset popit
+        UL_cleanup
+        return 1
+    fi
+fi
 
 case $1 in
   --changes | -c )
@@ -153,6 +161,11 @@ case $1 in
       git pull -j $cores
       echo
     fi
+    ;;
+--help | -h )
+    unset popit
+    UL_usage
+    return
     ;;
   * )
     echo "Fetching latest updates..."
