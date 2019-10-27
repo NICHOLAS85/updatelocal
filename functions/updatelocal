@@ -76,11 +76,14 @@ UL_changelogs(){
     if [ -z "$currentbranch" ] || [ -z "$(git rev-parse "@{u}" 2>/dev/null)" ] ; then return; fi
     changes=$(git log "$currentbranch".."$tracked_remote"/"$currentbranch")
 
-    if [ $changes ]; then echo "BEGIN====================================================\\"
-    echo "$PWD"; fi
+    if [ $changes ]; then
+    echo
+    echo 'BEGIN====================================================\'
+    echo "$PWD"
     git log --color=always --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --stat "$currentbranch".."$tracked_remote"/"$currentbranch"
-    if [ $changes ]; then echo "$PWD"; echo "======================================================END/"
-    echo; fi
+    echo "$PWD"
+    echo '======================================================END/'
+    fi
   fi
 }
 
@@ -132,7 +135,7 @@ if [[ $1 != "-r" && $1 != "--repull" && $1 != "-h" && $1 != "--help" ]]; then
         ls --color=auto
         echo
     else
-        echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory? Make sure to set \$UPDATELOCAL_GITDIR"
+        echo "Error cd-ing into '$UPDATELOCAL_GITDIR', is it a real directory?"
         unset popit
         UL_cleanup
         return 1
