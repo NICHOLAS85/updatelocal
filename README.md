@@ -13,5 +13,6 @@ Args:
 ```
 
 # Install
+Using Zplugin from https://github.com/zdharma/zplugin
 
-zplugin light NICHOLAS85/updatelocal;
+`zplugin light NICHOLAS85/updatelocal`
