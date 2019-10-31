@@ -30,16 +30,16 @@ EOF
 UL_fetchupdates(){
   if [ -d .git ]; then
     echo "Fetching $(basename $PWD)..."
-    git fetch -j $cores 2>&1
+    command git fetch -j $cores 2>&1
   fi
 }
 
 UL_checkupdates(){
   if [ -d .git ]; then
     local LOCAL REMOTE BASE gitname
-    LOCAL=$(git rev-parse @ 2>/dev/null)
-    REMOTE=$(git rev-parse "@{u}" 2>/dev/null)
-    BASE=$(git merge-base @ "@{u}" 2>/dev/null)
+    LOCAL=$(command git rev-parse @ 2>/dev/null)
+    REMOTE=$(command git rev-parse "@{u}" 2>/dev/null)
+    BASE=$(command git merge-base @ "@{u}" 2>/dev/null)
     gitname=$(basename $PWD)
 
     if [ -z $BASE ] || [ -z $REMOTE ]; then
@@ -73,14 +73,14 @@ UL_changelogs(){
     local currentbranch tracked_remote changes
     currentbranch=$(UL_git_current_branch)
     tracked_remote=$(git config "branch.$currentbranch.remote")
-    if [ -z "$currentbranch" ] || [ -z "$(git rev-parse "@{u}" 2>/dev/null)" ] ; then return; fi
-    changes=$(git log "$currentbranch".."$tracked_remote"/"$currentbranch")
+    if [ -z "$currentbranch" ] || [ -z "$(command git rev-parse "@{u}" 2>/dev/null)" ] ; then return; fi
+    changes=$(command git log "$currentbranch".."$tracked_remote"/"$currentbranch")
 
     if [ $changes ]; then
     echo
     echo 'BEGIN====================================================\'
     echo "$PWD"
-    git log --color=always --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --stat "$currentbranch".."$tracked_remote"/"$currentbranch"
+    command git log --color=always --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --stat "$currentbranch".."$tracked_remote"/"$currentbranch"
     echo "$PWD"
     echo '======================================================END/'
     fi
@@ -152,16 +152,16 @@ case $1 in
   --repull | -r )
     [[ $UPDATELOCAL_GITDIR/$2 != $UPDATELOCAL_GITDIR/ ]] && cd $UPDATELOCAL_GITDIR/$2 && popit="set" || { echo "Assuming --pwd"; unset popit }
     
-    REMOTE=$(git rev-parse "@{u}")
+    REMOTE=$(command git rev-parse "@{u}")
     if [[ -z $REMOTE ]]; then echo "Unable to repull"; UL_cleanup; return 1; fi
     
     UL_recentcommits
     echo "Are you sure you want to repull $PWD? [y/n]"
     read key
     if [ "$key" = "y" ] && UL_connected; then
-      git reset --hard
-      git clean -fdx
-      git pull -j $cores
+      command git reset --hard
+      command git clean -fdx
+      command git pull -j $cores
       echo
     fi
     ;;
