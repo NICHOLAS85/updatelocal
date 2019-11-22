@@ -1,14 +1,14 @@
 trap 'echo "Cleaning up..."; UL_cleanup; return 0' SIGINT
 
 UL_cleanup(){
-  if [[ -n $popit ]]; then cd - 2> /dev/null; fi
+  if [[ -n $popit ]]; then cd $popit 2> /dev/null; fi
   if zplugin status desyncr/auto-ls &>/dev/null && ! $isdolphin && [[ -n $unloaded ]]; then
     zplugin load desyncr/auto-ls
   fi
   UPDATELOCAL_GITDIR=$cache
 
   unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
-  unset cores cache hidden popit REMOTE unloaded lines
+  unset cores cache hidden popit REMOTE unloaded lines UL_pf p_opt
   trap - SIGINT
 }
 
@@ -18,11 +18,13 @@ Usage: updatelocal [args]
 
 Without arguments updatelocal will fetch all the directories located in \$UPDATELOCAL_GITDIR and highlight the repos with pending updates
 Args:
-  -r | --repull [basename] Completely reset supplied git directory basename and pull latest changes from remote repo, resets current directory if basename not supplied
-  -p | --pwd               Set \$UPDATELOCAL_GITDIR to the current directory temporarily
-  -c | --changes           Show a log of all repos with changes which have not been pulled yet
+  -r | --repull  [basename] Completely reset supplied git directory basename and pull latest changes
+                            from remote repo, resets  current directory if basename not supplied
+  -p | --pwd                Set \$UPDATELOCAL_GITDIR to the current directory temporarily
+  -c | --changes [basename] Show a log of all repos with changes which have not been pulled yet,
+                            optionally of just basename
 
-  -h | --help              Show this extremely helpful text
+  -h | --help               Show this extremely helpful text
 EOF
   UL_cleanup
 }
@@ -37,6 +39,7 @@ UL_fetchupdates(){
 UL_checkupdates(){
   if [ -d .git ]; then
     local LOCAL REMOTE BASE gitname
+    declare -gA UL_pending
     LOCAL=$(command git rev-parse @ 2>/dev/null)
     REMOTE=$(command git rev-parse "@{u}" 2>/dev/null)
     BASE=$(command git merge-base @ "@{u}" 2>/dev/null)
@@ -48,6 +51,7 @@ UL_checkupdates(){
       [ $hidden ] || echo "Up-to-date $gitname"
     elif [ $LOCAL = $BASE ]; then
       echo -e "\e[00;31mNeed to pull $gitname\e[00m"
+      UL_pending[$gitname]="$gitname"
     elif [ $REMOTE = $BASE ]; then
       [ $hidden ] || echo -e "\e[00;31mNeed to push $gitname\e[00m"
     else
@@ -116,9 +120,9 @@ UL_connected(){
 [[ -n "$isdolphin" ]] && { $isdolphin || { zplugin unload -q desyncr/auto-ls &>/dev/null && unloaded=true; } }
 UPDATELOCAL_GITDIR=$(realpath $UPDATELOCAL_GITDIR)
 cache=$UPDATELOCAL_GITDIR
-if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="set"; fi
+if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="$PWD"; fi
 if [[ $1 = "-p" || $1 = "--pwd" ]]; then
-  unset popit
+  p_opt=set
   UPDATELOCAL_GITDIR=$PWD
   shift
 fi
@@ -128,7 +132,6 @@ cores=$(nproc)
 if [[ $1 != "-r" && $1 != "--repull" && $1 != "-h" && $1 != "--help" ]]; then
     if [[ -z $UPDATELOCAL_GITDIR ]]; then
         echo "\$UPDATELOCAl_GITDIR is unset, set this variable before running"
-        unset popit
         UL_cleanup
         return 1
     elif cd $UPDATELOCAL_GITDIR; then
@@ -145,12 +148,14 @@ fi
 case $1 in
   --changes | -c )
     hidden=true
-    { for d in ./*/ ; do (builtin cd "$d" && UL_checkupdates); done
+    [[ -n $UL_pending && -z $p_opt ]] && UL_pf=('./'${^UL_pending}'/')
+    UL_pf=( ${${${${+2:+./$2/}:-$(printf '%s ' $UL_pf)}# }:-${${+p_opt+$PWD}:-.}/*/} )
+    { for d in ${UL_pf[@]} ; do (builtin cd "$d" && UL_checkupdates); done
     echo
-    for d in ./*/ ; do (builtin cd "$d" && UL_changelogs); done } | less -R
+    for d in ${UL_pf[@]} ; do (builtin cd "$d" && UL_changelogs); done } | less -R
     ;;
   --repull | -r )
-    [[ $UPDATELOCAL_GITDIR/$2 != $UPDATELOCAL_GITDIR/ ]] && cd $UPDATELOCAL_GITDIR/$2 && popit="set" || { echo "Assuming --pwd"; unset popit }
+    [[ $UPDATELOCAL_GITDIR/$2 != $UPDATELOCAL_GITDIR/ ]] && cd $UPDATELOCAL_GITDIR/$2 || { echo "Assuming --pwd"; unset popit }
     
     REMOTE=$(command git rev-parse "@{u}")
     if [[ -z $REMOTE ]]; then echo "Unable to repull"; UL_cleanup; return 1; fi
@@ -163,6 +168,7 @@ case $1 in
       command git clean -fdx
       command git pull -j $cores
       echo
+      [[ -n "${UL_pending[${2:-null}]}" ]] && unset "UL_pending[$2]"
     fi
     ;;
 --help | -h )
@@ -174,7 +180,7 @@ case $1 in
     echo "Fetching latest updates..."
     UL_connected && (for d in ./*/ ; do (builtin cd "$d" && UL_fetchupdates) & done | GREP_COLORS='ms=1;34' grep -E --color '.*From.*|$'; wait)
     echo
-    for d in ./*/ ; do (builtin cd "$d" && UL_checkupdates); done
+    for d in ${${+p_opt+$PWD}:-$UPDATELOCAL_GITDIR}/*/ ; do {builtin cd "$d" && UL_checkupdates}; done
     echo
     ;;
 esac

@@ -24,8 +24,25 @@ case $state in
                 typeset -a gitdirs
                 gitdirs=( "$UPDATELOCAL_GITDIR/"/*(N:t) )
 
+                if [[ -n $UL_pending ]]; then
+                    typeset -a pending
+                    pending=( ${UL_pending[@]} )
+                    _alternative \
+                        'pending:Pending:compadd -a - pending' \
+                        'gitdirs:Repos:compadd -a - gitdirs' && \
+                            ret=0
+                else
                 _wanted gitdirs expl "Repos" \
                     compadd "$@" -a - gitdirs && ret=0
+                fi
+                ;;
+            -c)
+                if [[ -n $UL_pending ]]; then
+                    typeset -a pending
+                    pending=( ${UL_pending[@]} )
+                    _wanted gitdirs expl "Pending" \
+                        compadd "$@" -a - UL_pending && ret=0
+                fi
                 ;;
             *)
                 ret=1
