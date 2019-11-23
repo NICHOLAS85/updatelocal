@@ -40,7 +40,7 @@ case $state in
                 if [[ -n $UL_pending ]]; then
                     typeset -a pending
                     pending=( ${UL_pending[@]} )
-                    _wanted gitdirs expl "Pending" \
+                    _wanted pending expl "Pending" \
                         compadd "$@" -a - UL_pending && ret=0
                 fi
                 ;;

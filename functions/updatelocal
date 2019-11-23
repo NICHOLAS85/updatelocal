@@ -8,7 +8,7 @@ UL_cleanup(){
   UPDATELOCAL_GITDIR=$cache
 
   unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
-  unset cores cache hidden popit REMOTE unloaded lines UL_pf p_opt
+  unset cores cache hidden popit REMOTE unloaded lines UL_pf p_opt d
   trap - SIGINT
 }
 
