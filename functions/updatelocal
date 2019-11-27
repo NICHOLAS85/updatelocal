@@ -2,13 +2,11 @@ trap 'echo "Cleaning up..."; UL_cleanup; return 0' SIGINT
 
 UL_cleanup(){
   if [[ -n $popit ]]; then cd $popit 2> /dev/null; fi
-  if zplugin status desyncr/auto-ls &>/dev/null && ! $isdolphin && [[ -n $unloaded ]]; then
-    zplugin load desyncr/auto-ls
-  fi
+  $acrun && eval "${UL_Bcomm}"
   UPDATELOCAL_GITDIR=$cache
 
   unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
-  unset cores cache hidden popit REMOTE unloaded lines UL_pf p_opt d
+  unset cores cache hidden popit REMOTE lines UL_pf p_opt d acrun
   trap - SIGINT
 }
 
@@ -78,7 +76,7 @@ UL_changelogs(){
     currentbranch=$(UL_git_current_branch)
     tracked_remote=$(git config "branch.$currentbranch.remote")
     if [ -z "$currentbranch" ] || [ -z "$(command git rev-parse "@{u}" 2>/dev/null)" ] ; then return; fi
-    changes=$(command git log "$currentbranch".."$tracked_remote"/"$currentbranch")
+    changes=$(command git log ..FETCH_HEAD)
 
     if [ $changes ]; then
     echo
@@ -116,8 +114,8 @@ UL_connected(){
   ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) &> /dev/null && return 0 || { echo "You're not connected to the internet"; return 1; }
 }
 
-#support for disabling auto-ls when terminal is not dolphin, already disabled otherwise
-[[ -n "$isdolphin" ]] && { $isdolphin || { zplugin unload -q desyncr/auto-ls &>/dev/null && unloaded=true; } }
+# Support for running a command when UL_Acond is true
+(( ${+UL_Acond} )) && { eval "${UL_Acond:+true}" && { eval "${UL_Acomm}"; acrun=true } } || acrun=false
 UPDATELOCAL_GITDIR=$(realpath $UPDATELOCAL_GITDIR)
 cache=$UPDATELOCAL_GITDIR
 if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="$PWD"; fi
