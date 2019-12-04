@@ -1,9 +1,9 @@
-trap 'echo "Cleaning up..."; UL_cleanup; return 0' SIGINT
+trap 'echo "Cleaning up..."; UL_cleanup "$@"; return 0' SIGINT
 
 UL_cleanup(){
   if [[ -n $popit ]]; then cd $popit 2> /dev/null; fi
-  $acrun && eval "${UL_Bcomm}"
   UPDATELOCAL_GITDIR=$cache
+  $acrun && eval "${UL_Bcomm}"
 
   unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
   unset cores cache hidden popit REMOTE lines UL_pf p_opt d acrun
@@ -24,7 +24,7 @@ Args:
 
   -h | --help               Show this extremely helpful text
 EOF
-  UL_cleanup
+  UL_cleanup "$@"
 }
 
 UL_fetchupdates(){
@@ -171,7 +171,7 @@ case $1 in
     ;;
 --help | -h )
     unset popit
-    UL_usage
+    UL_usage "$@"
     return
     ;;
   * )
@@ -179,9 +179,8 @@ case $1 in
     UL_connected && (for d in ./*/ ; do (builtin cd "$d" && UL_fetchupdates) & done | GREP_COLORS='ms=1;34' grep -E --color '.*From.*|$'; wait)
     echo
     for d in ${${+p_opt+$PWD}:-$UPDATELOCAL_GITDIR}/*/ ; do {builtin cd "$d" && UL_checkupdates}; done
-    echo
     ;;
 esac
 
 
-UL_cleanup
+UL_cleanup "$@"
