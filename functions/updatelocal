@@ -159,7 +159,7 @@ case $1 in
     if [[ -z $REMOTE ]]; then echo "Unable to repull"; UL_cleanup; return 1; fi
 
     UL_recentcommits
-    vared -p "Are you sure you want to repull $PWD? [y/n]" -c tmp
+    vared -p "Are you sure you want to repull $PWD? [y/n]: " -c tmp
     if [ "$tmp" = "y" ] && UL_connected; then
       command git reset --hard
       command git clean -fdx
