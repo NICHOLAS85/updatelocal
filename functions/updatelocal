@@ -1,12 +1,12 @@
 trap 'echo "Cleaning up..."; UL_cleanup "$@"; return 0' SIGINT
+local cores cache hidden popit REMOTE lines UL_pf p_opt d acrun tmp
 
 UL_cleanup(){
-  if [[ -n $popit ]]; then cd $popit 2> /dev/null; fi
+  if [[ -n $popit ]]; then cd -q $popit 2> /dev/null; fi
   UPDATELOCAL_GITDIR=$cache
   $acrun && eval "${UL_Bcomm}"
 
   unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
-  unset cores cache hidden popit REMOTE lines UL_pf p_opt d acrun
   trap - SIGINT
 }
 
@@ -115,7 +115,7 @@ UL_connected(){
 }
 
 # Support for running a command when UL_Acond is true
-(( ${+UL_Acond} )) && { eval "${UL_Acond:+true}" && { eval "${UL_Acomm}"; acrun=true } } || acrun=false
+(( ${+UL_Acond} )) && { eval "${UL_Acond:+true}" && { eval "${UL_Acomm}"; acrun=true; } } || acrun=false
 UPDATELOCAL_GITDIR=$(realpath $UPDATELOCAL_GITDIR)
 cache=$UPDATELOCAL_GITDIR
 if [[ $UPDATELOCAL_GITDIR != "$PWD" ]]; then popit="$PWD"; fi
@@ -132,7 +132,7 @@ if [[ $1 != "-r" && $1 != "--repull" && $1 != "-h" && $1 != "--help" ]]; then
         echo "\$UPDATELOCAl_GITDIR is unset, set this variable before running"
         UL_cleanup
         return 1
-    elif cd $UPDATELOCAL_GITDIR; then
+    elif cd -q $UPDATELOCAL_GITDIR; then
         ls --color=auto
         echo
     else
@@ -148,25 +148,30 @@ case $1 in
     hidden=true
     [[ -n $UL_pending && -z $p_opt ]] && UL_pf=('./'${^UL_pending}'/')
     UL_pf=( ${${${${+2:+./$2/}:-$(printf '%s ' $UL_pf)}# }:-${${+p_opt+$PWD}:-.}/*/} )
-    { for d in ${UL_pf[@]} ; do (builtin cd "$d" && UL_checkupdates); done
+    { for d in ${UL_pf[@]} ; do (builtin cd -q "$d" && UL_checkupdates); done
     echo
-    for d in ${UL_pf[@]} ; do (builtin cd "$d" && UL_changelogs); done } | less -R
+    for d in ${UL_pf[@]} ; do (builtin cd -q "$d" && UL_changelogs); done } | less -R
     ;;
   --repull | -r )
-    [[ $UPDATELOCAL_GITDIR/$2 != $UPDATELOCAL_GITDIR/ ]] && cd $UPDATELOCAL_GITDIR/$2 || { echo "Assuming --pwd"; unset popit }
-    
+    [[ $UPDATELOCAL_GITDIR/$2 != $UPDATELOCAL_GITDIR/ ]] && cd -q $UPDATELOCAL_GITDIR/$2 || { echo "Assuming --pwd"; unset popit; }
+
     REMOTE=$(command git rev-parse "@{u}")
     if [[ -z $REMOTE ]]; then echo "Unable to repull"; UL_cleanup; return 1; fi
-    
+
     UL_recentcommits
-    echo "Are you sure you want to repull $PWD? [y/n]"
-    read key
-    if [ "$key" = "y" ] && UL_connected; then
+    vared -p "Are you sure you want to repull $PWD? [y/n]" -c tmp
+    if [ "$tmp" = "y" ] && UL_connected; then
       command git reset --hard
       command git clean -fdx
       command git pull -j $cores
       echo
       [[ -n "${UL_pending[${2:-null}]}" ]] && unset "UL_pending[$2]"
+      if [[ -r "$UPDATELOCAL_GITDIR/@install_scripts/${PWD:t}" ]]; then
+        vared -p 'An install script was found, would you like to run it? [y/n]: ' -c tmp
+        if [ "$tmp" = "y" ]; then
+          source "$UPDATELOCAL_GITDIR/@install_scripts/${PWD:t}"
+        fi
+      fi
     fi
     ;;
 --help | -h )
@@ -176,9 +181,9 @@ case $1 in
     ;;
   * )
     echo "Fetching latest updates..."
-    UL_connected && (for d in ./*/ ; do (builtin cd "$d" && UL_fetchupdates) & done | GREP_COLORS='ms=1;34' grep -E --color '.*From.*|$'; wait)
+    UL_connected && (for d in ./*/ ; do (builtin cd -q "$d" && UL_fetchupdates) & done | GREP_COLORS='ms=1;34' grep -E --color '.*From.*|$'; wait)
     echo
-    for d in ${${+p_opt+$PWD}:-$UPDATELOCAL_GITDIR}/*/ ; do {builtin cd "$d" && UL_checkupdates}; done
+    for d in ${${+p_opt+$PWD}:-$UPDATELOCAL_GITDIR}/*/ ; do { builtin cd -q "$d" && UL_checkupdates; }; done
     ;;
 esac
 
