@@ -166,10 +166,10 @@ case $1 in
       command git pull -j $cores
       echo
       [[ -n "${UL_pending[${2:-null}]}" ]] && unset "UL_pending[$2]"
-      if [[ -r "$UPDATELOCAL_GITDIR/@install_scripts/${PWD:t}" ]]; then
+      if [[ -r "$UPDATELOCAL_GITDIR/.install_scripts/${PWD:t}" ]]; then
         vared -p 'An install script was found, would you like to run it? [y/n]: ' -c tmp
         if [ "$tmp" = "y" ]; then
-          source "$UPDATELOCAL_GITDIR/@install_scripts/${PWD:t}"
+          source "$UPDATELOCAL_GITDIR/.install_scripts/${PWD:t}"
         fi
       fi
     fi
