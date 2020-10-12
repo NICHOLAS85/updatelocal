@@ -111,7 +111,7 @@ UL_recentcommits(){
 }
 
 UL_connected(){
-  ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) &> /dev/null && return 0 || { echo "You're not connected to the internet"; return 1; }
+  ping -q -w 1 -c 1 $(ip r | grep -m1 default | cut -d ' ' -f 3) &> /dev/null && return 0 || { echo "You're not connected to the internet"; return 1; }
 }
 
 # Support for running a command when UL_Acond is true
@@ -162,8 +162,9 @@ case $1 in
     vared -p "Are you sure you want to repull $PWD? [y/n]: " -c tmp
     if [ "$tmp" = "y" ] && UL_connected; then
       command git reset --hard
-      command git clean -fdx
-      command git pull -j $cores
+      vared -p "Would you like to skip a cleanbuild? [y/n]: " -c tmp
+      [ "$tmp" = "n" ] && command git clean -fdx
+      command git pull -j $cores --ff-only origin $REMOTE
       echo
       [[ -n "${UL_pending[${2:-null}]}" ]] && unset "UL_pending[$2]"
       if [[ -r "$UPDATELOCAL_GITDIR/.install_scripts/${PWD:t}" ]]; then
