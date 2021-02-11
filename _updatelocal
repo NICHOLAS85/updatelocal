@@ -19,11 +19,16 @@ case $state in
         _describe -t commands "option" commands && ret=0
         ;;
     argument)
+        [[ $words[2] = -p || $words[2] = --pwd ]] && {
+                local UPDATELOCAL_GITDIR=$PWD
+                local UL_pending=
+                words[2]=()
+        }
         case $words[2] in
             -r)
                 typeset -a gitdirs
                 gitdirs=( "$UPDATELOCAL_GITDIR/"/*(N:t) )
-
+                [[ -r $TMPDIR/updatelocal_pending ]] && source $TMPDIR/updatelocal_pending
                 if [[ -n $UL_pending ]]; then
                     typeset -a pending
                     pending=( ${UL_pending[@]} )

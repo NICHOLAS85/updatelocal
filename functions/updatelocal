@@ -5,6 +5,7 @@ UL_cleanup(){
   if [[ -n $popit ]]; then cd -q $popit 2> /dev/null; fi
   UPDATELOCAL_GITDIR=$cache
   $acrun && eval "${UL_Bcomm}"
+  declare -p UL_pending > $TMPDIR/updatelocal_pending
 
   unset -f UL_cleanup UL_usage UL_fetchupdates UL_checkupdates UL_git_current_branch UL_changelogs UL_recentcommits UL_connected
   trap - SIGINT
@@ -82,8 +83,8 @@ UL_changelogs(){
     echo
     echo 'BEGIN====================================================\'
     echo "$PWD"
-    command git log --color=always --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --stat "$currentbranch".."$tracked_remote"/"$currentbranch"
-    echo "$PWD"
+    command git log --color=always --graph --pretty='''%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset''' --stat "$currentbranch".."$tracked_remote"/"$currentbranch" | awk 'NF'
+    echo "\n$PWD"
     echo '======================================================END/'
     fi
   fi
@@ -142,6 +143,8 @@ if [[ $1 != "-r" && $1 != "--repull" && $1 != "-h" && $1 != "--help" ]]; then
         return 1
     fi
 fi
+
+[[ -r $TMPDIR/updatelocal_pending ]] && source $TMPDIR/updatelocal_pending
 
 case $1 in
   --changes | -c )
